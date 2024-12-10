@@ -15,19 +15,20 @@ import {
 export default function App() {
   const [hasPermission, setHasPermission] = useState<boolean>(false);
   const [faces, setFaces] = useState<Face[]>([]);
-  const device = useCameraDevice('front'); // 전면 카메라 사용
+  const device = useCameraDevice('front');
 
   const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 
-  const faceDetectionOptions = useRef<FaceDetectionOptions>({
-    performanceMode: 'fast',
-    classificationMode: 'all',
-    windowWidth: screenWidth,
-    windowHeight: screenHeight,
-  }).current;
+  const faceDetectionOptions: FaceDetectionOptions =
+    useRef<FaceDetectionOptions>({
+      performanceMode: 'fast',
+      classificationMode: 'all',
+      windowWidth: screenWidth,
+      windowHeight: screenHeight,
+      autoScale: true,
+    }).current;
 
   useEffect(() => {
-    // 카메라 권한 요청
     const requestPermissions = async () => {
       console.log('requestPermissions');
       const status: CameraPermissionRequestResult =
@@ -42,15 +43,18 @@ export default function App() {
 
   if (!device || !hasPermission) {
     return (
-      <View style={styles.container}>
+      <View>
         <Text>Loading Camera...</Text>
       </View>
     );
   }
 
   function handleFacesDetection(faces: Face[], frame: Frame) {
-    console.log('faces', faces);
     setFaces(faces);
+  }
+
+  function handleUiRotation(rotation: number) {
+    console.log('UI Rotation', rotation);
   }
 
   return (
@@ -61,17 +65,12 @@ export default function App() {
         position: 'relative',
       }}>
       <FaceCamera
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-        }}
+        style={StyleSheet.absoluteFill}
         device={device}
         isActive={true}
         faceDetectionCallback={handleFacesDetection}
         faceDetectionOptions={faceDetectionOptions}
+        onUIRotationChanged={handleUiRotation}
       />
 
       {faces.map((face, index) => (
@@ -91,7 +90,3 @@ export default function App() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {},
-});
