@@ -29,10 +29,8 @@ export default function App() {
 
   useEffect(() => {
     const requestPermissions = async () => {
-      console.log('requestPermissions');
       const status: CameraPermissionRequestResult =
         await Camera.requestCameraPermission();
-
       console.log('requestPermissions', status);
       setHasPermission(status === 'granted');
     };
@@ -48,8 +46,9 @@ export default function App() {
     );
   }
 
-  function handleFacesDetection(faces: Face[], _frame: Frame) {
-    setFaces(faces);
+  function handleFacesDetection(faceArray: Face[], _frame: Frame) {
+    console.log('Faces Detected', faceArray);
+    setFaces(faceArray);
   }
 
   function handleUiRotation(rotation: number) {
@@ -62,6 +61,8 @@ export default function App() {
         flex: 1,
         backgroundColor: 'black',
         position: 'relative',
+        width: screenWidth,
+        height: screenHeight,
       }}>
       <FaceCamera
         style={StyleSheet.absoluteFill}
