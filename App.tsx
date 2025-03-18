@@ -47,7 +47,6 @@ export default function App() {
   }
 
   function handleFacesDetection(faceArray: Face[], _frame: Frame) {
-    console.log('Faces Detected', faceArray);
     setFaces(faceArray);
   }
 
