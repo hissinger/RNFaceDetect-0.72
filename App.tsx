@@ -21,8 +21,7 @@ export default function App() {
 
   const faceDetectionOptions: FaceDetectionOptions =
     useRef<FaceDetectionOptions>({
-      performanceMode: 'fast',
-      classificationMode: 'all',
+      performanceMode: 'accurate',
       windowWidth: screenWidth,
       windowHeight: screenHeight,
       autoScale: true,
@@ -49,7 +48,7 @@ export default function App() {
     );
   }
 
-  function handleFacesDetection(faces: Face[], frame: Frame) {
+  function handleFacesDetection(faces: Face[], _frame: Frame) {
     setFaces(faces);
   }
 
