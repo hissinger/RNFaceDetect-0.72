@@ -1,8 +1,39 @@
 diff --git a/node_modules/react-native-vision-camera-face-detector/ios/VisionCameraFaceDetector.swift b/node_modules/react-native-vision-camera-face-detector/ios/VisionCameraFaceDetector.swift
-index 32825dc..3207b36 100644
+index 32825dc..6cffc7c 100644
 --- a/node_modules/react-native-vision-camera-face-detector/ios/VisionCameraFaceDetector.swift
 +++ b/node_modules/react-native-vision-camera-face-detector/ios/VisionCameraFaceDetector.swift
-@@ -257,11 +257,9 @@ public class VisionCameraFaceDetector: FrameProcessorPlugin {
+@@ -18,6 +18,8 @@ public class VisionCameraFaceDetector: FrameProcessorPlugin {
+   private var trackingEnabled = false
+   private var windowWidth = 1.0
+   private var windowHeight = 1.0
++  private var cameraFacing:AVCaptureDevice.Position = .front
++  private var orientationManager = VisionCameraFaceDetectorOrientation()
+ 
+   public override init(
+     proxy: VisionCameraProxyHolder, 
+@@ -247,6 +249,21 @@ public class VisionCameraFaceDetector: FrameProcessorPlugin {
+     }
+   }
+ 
++  func getImageOrientation() -> UIImage.Orientation {
++    switch orientationManager.orientation {
++      case .portrait:
++        return cameraFacing == .front ? .leftMirrored : .right
++      case .landscapeLeft:
++        return cameraFacing == .front ? .upMirrored : .up
++      case .portraitUpsideDown:
++        return cameraFacing == .front ? .rightMirrored : .left
++      case .landscapeRight:
++        return cameraFacing == .front ? .downMirrored : .down
++      @unknown default:
++        return .up
++    }
++  }
++  
+   public override func callback(
+     _ frame: Frame, 
+     withArguments arguments: [AnyHashable: Any]?
+@@ -257,11 +274,8 @@ public class VisionCameraFaceDetector: FrameProcessorPlugin {
        // we need to invert sizes as frame is always -90deg rotated
        let width = CGFloat(frame.height)
        let height = CGFloat(frame.width)
@@ -11,8 +42,116 @@ index 32825dc..3207b36 100644
 -      )
        let image = VisionImage(buffer: frame.buffer)
 -      image.orientation = orientation
-+      image.orientation = .leftMirrored
-+
-     
++      image.orientation = getImageOrientation()
+ 
        var scaleX:CGFloat
        var scaleY:CGFloat
+diff --git a/node_modules/react-native-vision-camera-face-detector/ios/VisionCameraFaceDetectorOrientation.swift b/node_modules/react-native-vision-camera-face-detector/ios/VisionCameraFaceDetectorOrientation.swift
+new file mode 100644
+index 0000000..e5fbdc5
+--- /dev/null
++++ b/node_modules/react-native-vision-camera-face-detector/ios/VisionCameraFaceDetectorOrientation.swift
+@@ -0,0 +1,103 @@
++import VisionCamera
++import AVFoundation
++import CoreMotion
++import Foundation
++import UIKit
++
++/**
++ The Orientation used for the Preview, Photo, Video and Frame Processor outputs.
++ */
++enum Orientation: String {
++  /**
++   Phone is in upright portrait mode, home button/indicator is at the bottom
++   */
++  case portrait
++  /**
++   Phone is in landscape mode, home button/indicator is on the left
++   */
++  case landscapeLeft = "landscape-left"
++  /**
++   Phone is in upside-down portrait mode, home button/indicator is at the top
++   */
++  case portraitUpsideDown = "portrait-upside-down"
++  /**
++   Phone is in landscape mode, home button/indicator is on the right
++   */
++  case landscapeRight = "landscape-right"
++}
++
++final class VisionCameraFaceDetectorOrientation {
++  private let motionManager = CMMotionManager()
++  private let operationQueue = OperationQueue()
++  
++  // The orientation of the physical device's gyro sensor/accelerometer
++  var orientation: Orientation {
++    didSet {
++      if oldValue != orientation {
++        print("Device Orientation changed from \(oldValue) -> \(orientation)")
++      }
++    }
++  }
++    
++  init() {
++    // default value
++    orientation = .portrait
++    startDeviceOrientationListener()
++  }
++    
++  deinit {
++    stopDeviceOrientationListener()
++  }
++  
++  private func startDeviceOrientationListener() {
++    stopDeviceOrientationListener()
++    if motionManager.isAccelerometerAvailable {
++      motionManager.accelerometerUpdateInterval = 0.2
++      motionManager.startAccelerometerUpdates(to: operationQueue) { accelerometerData, error in
++        if let error {
++          print("Failed to get Accelerometer data! \(error)")
++        }
++        if let accelerometerData {
++          self.orientation = accelerometerData.deviceOrientation
++        }
++      }
++    }
++  }
++  
++  private func stopDeviceOrientationListener() {
++    if motionManager.isAccelerometerActive {
++      motionManager.stopAccelerometerUpdates()
++    }
++  }
++}
++
++extension CMAccelerometerData {
++  /**
++   Get the current device orientation from the given acceleration/gyro data.
++   */
++  var deviceOrientation: Orientation {
++    let acceleration = acceleration
++    let xNorm = abs(acceleration.x)
++    let yNorm = abs(acceleration.y)
++    let zNorm = abs(acceleration.z)
++
++    // If the z-axis is greater than the other axes, the phone is flat.
++    if zNorm > xNorm && zNorm > yNorm {
++      return .portrait
++    }
++
++    if xNorm > yNorm {
++      if acceleration.x > 0 {
++        return .landscapeRight
++      } else {
++        return .landscapeLeft
++      }
++    } else {
++      if acceleration.y > 0 {
++        return .portraitUpsideDown
++      } else {
++        return .portrait
++      }
++    }
++  }
++}
